@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CareerPath AI{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<header class="app-header">
+    <div class="container nav-container">
+        <div class="logo">
+            <div>
+                <div class="logo-text">CareerPath AI</div>
+                <div class="logo-tagline">Your Personal Career Guidance Assistant</div>
+            </div>
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('dashboard') }}" class="active">Home</a></li>
+            <li><a href="{{ url_for('chat') }}">Chat</a></li>
+            <li><a href="{{ url_for('about') }}">About</a></li>
+            <li><a href="{{ url_for('contact') }}">Contact</a></li>
+            <li class="user-menu">
+                <div class="user-info">
+                    <div class="user-avatar">{{ username[0]|upper }}</div>
+                    <span>Hello, {{ full_name or username }}</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            </li>
+        </ul>
+    </div>
+</header>
+
+<!-- Main Content -->
+<div class="container">
+    <div class="dashboard-header">
+        <div class="welcome-message">
+            <h1>Welcome back, {{ full_name or username }}! 👋</h1>
+            <p>Ready to continue your career exploration journey?</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ sessions|length }}</div>
+                <div class="stat-label">Career Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ sessions|length }}</div>
+                <div class="stat-label">Active Conversations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Available Support</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section" id="profile">
+                <h3 class="sidebar-title">👤 Your Profile</h3>
+                <div class="profile-form">
+                    <label>Educational Background</label>
+                    <input type="text" id="educationalBackground" 
+                           value="{{ educational_background or '' }}" 
+                           placeholder="e.g., FSC Pre-Medical">
+
+                    <label>Your Interests / Skills</label>
+                    <textarea id="userInterests" 
+                              placeholder="List your interests and skills..." 
+                              rows="3">{{ interests|join(', ') if interests else '' }}</textarea>
+
+                    <button class="save-profile-btn" onclick="saveUserProfile()">💾 Save Profile</button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">🕑 Recent Sessions</h3>
+                <div id="sessionList">
+                    {% if sessions %}
+                        {% for session in sessions %}
+                        <div class="session-item" onclick="openChat('{{ session.session_id }}')">
+                            <div class="session-name">{{ session.session_name }}</div>
+                            <div class="session-date">{{ session.updated_at[:10] }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color: #718096; font-style: italic; text-align: center;">No sessions yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Section -->
+        <main>
+            <div style="background: white; border-radius: 12px; box-shadow: var(--shadow); padding: 2rem;">
+                <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">Your Career Journey</h2>
+
+                <div style="display: grid; gap: 1.5rem;">
+                    <div style="padding: 1.5rem; background: var(--light-gray); border-radius: 8px;">
+                        <h3 style="color: var(--secondary-teal); margin-bottom: 1rem;">🚀 Get Started</h3>
+                        <p>Begin your career counseling session by chatting with our AI assistant. You can ask about:</p>
+                        <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+                            <li>Career options based on your education</li>
+                            <li>Emerging fields and their scope</li>
+                            <li>Salary expectations and job market trends</li>
+                            <li>Educational pathways and requirements</li>
+                        </ul>
+                        <a href="{{ url_for('chat') }}" class="cta-button primary" style="display: inline-block; margin-top: 1rem;">Start Chatting</a>
+                    </div>
+
+                    <div style="padding: 1.5rem; background: var(--light-gray); border-radius: 8px;">
+                        <h3 style="color: var(--secondary-teal); margin-bottom: 1rem;">📊 Your Progress</h3>
+                        <p>You have <strong>{{ sessions|length }}</strong> career counseling sessions. Keep exploring to discover the perfect career path for you!</p>
+                    </div>
+
+                    <div style="padding: 1.5rem; background: var(--light-gray); border-radius: 8px;">
+                        <h3 style="color: var(--secondary-teal); margin-bottom: 1rem;">💡 Pro Tips</h3>
+                        <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+                            <li>Be specific about your educational background for better recommendations</li>
+                            <li>Ask about both traditional and emerging career fields</li>
+                            <li>Inquire about skill requirements and training programs</li>
+                            <li>Discuss work-life balance and job satisfaction factors</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+// Save user profile info
+async function saveUserProfile() {
+    const educationalBackground = document.getElementById("educationalBackground").value.trim();
+    const interests = document.getElementById("userInterests").value.trim().split(',').map(i => i.trim());
+
+    if (!educationalBackground) {
+        alert("Please enter your educational background");
+        return;
+    }
+
+    const res = await fetch('/update_profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            educational_background: educationalBackground,
+            interests: interests
+        })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        alert('✅ Profile updated successfully!');
+    } else {
+        alert('❌ Failed to update profile.');
+    }
+}
+
+// Open chat by session id
+function openChat(sessionId) {
+    window.location.href = `/chat?session_id=${sessionId}`;
+}
+</script>
+
+{% endblock %}
